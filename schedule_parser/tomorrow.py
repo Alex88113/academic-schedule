@@ -1,9 +1,11 @@
 import asyncio
 from typing import Dict
-from datetime import datetime
 
-from loguru import logger
 import httpx
+from loggers_module.logger_module import *
+
+from datetime import datetime, timedelta
+
 
 from .auth import (
     create_settings_connections,
@@ -28,7 +30,8 @@ def get_headlines_request(token: str) -> Dict[str, str]:
         }
     return headers
 
-class ScheduleParser:
+
+class TomorrowSchedule:
     def __init__(self, auth_client: AuthorizationClient):
         self.auth_client = auth_client
         self.schedule_url = "https://msapi.top-academy.ru/api/v2/schedule/operations/get-month?date_filter="
@@ -52,12 +55,14 @@ class ScheduleParser:
         }
         return headers
 
-    async def get_request(self) -> str:
+    async def get_tomorrow(self) -> str:
         date = datetime.today()
-        formatted_date = date.strftime("%Y-%m-%d")
+        delta = timedelta(days=1)
+        add_date = date + delta
+        formatted_date = add_date.strftime("%Y-%m-%d")
         url = f"{self.schedule_url + formatted_date}"
 
-        token = self.auth_client._token_auth
+        token = self.auth_client.token_auth
         headers = get_headlines_request(token)
 
         logger.info("Отправка get запроса....")
@@ -66,8 +71,8 @@ class ScheduleParser:
             response = await self.session.get(url, headers=headers)
             data = response.json()
             schedule = ''
-            logger.info("Расписание получено")
-            schedule += f"📅 ДАТА ЗАНЯТИЙ НА  {formatted_date} ЧИСЛО\n"
+            logger.info("Расписание на завтра получено.")
+            schedule += f"📅 ДАТА ЗАНЯТИЙ ЗАВТРА {formatted_date} ЧИСЛО\n"
 
             for data2 in data:
                 if data2['date'] == formatted_date:

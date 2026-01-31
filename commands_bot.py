@@ -1,22 +1,24 @@
-import sys
-import os
-import asyncio
-
-from loguru import logger
-from aiogram import Bot, Dispatcher, types
+from aiogram import (
+    Bot, F,
+    Dispatcher, types
+)
 from aiogram.filters import Command
-from config_user_settings.config_settings import *
-from aiogram import F
+from aiogram.types import Message, ReplyKeyboardRemove
 from dotenv import load_dotenv
 
-from schedule_parser.auth import AuthClients
-from schedule_parser.parser import getting_schedule
+try:
+    from config_settings import *
+    from schedule_parser.auth import AuthorizationClient
+    from schedule_parser.parser import ScheduleParser
+    from schedule_parser.tomorrow import TomorrowSchedule
+    logger.info("Модули успешно импортированы!")
 
-load_dotenv()
+except ModuleNotFoundError as error:
+    logger.error("Возникла ошибка при импорте модулей из schedule_parser:{e}", e=error)
+    raise ValueError(f"Возникла ошибка при импорте модулей из schedule_parser:{error}")
 
 
 def setup_package_path():
-    """Добавляет корневую директорию проекта в sys.path"""
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(current_dir)  # Поднимаемся на уровень выше
 
@@ -24,19 +26,10 @@ def setup_package_path():
         sys.path.insert(0, project_root)
         logger.info(f"Added to sys.path: {project_root}")
 
-
 setup_package_path()
-
-try:
-    from schedule_parser.auth import AuthClients
-    from schedule_parser.parser import getting_schedule
-
-    logger.info("Модули schedule_parser успешно импортированы")
-except ImportError as e:
-    logger.error(f"Ошибка импорта: {e}")
-    raise
-
+load_dotenv()
 logger.remove()
+
 logger.add(sys.stderr, format='{time} | {level} | {message}', level='INFO')
 
 bot = Bot(os.getenv('TOKEN_MY_BOT'))
@@ -44,24 +37,80 @@ dp = Dispatcher()
 logger.info('БОТ СОЗДАН!')
 
 async def get_schedule():
-    obj_class = AuthClients(user_data=user_data)
-    token = await obj_class.get_authorization()
-    schedule = await getting_schedule(token)
+    obj_auth = AuthorizationClient()
+    obj_schedule = ScheduleParser(obj_auth)
+    token: str = await obj_auth.post_request()
+    schedule = await obj_schedule.get_request()
     return schedule
+
+async def get_tomorrow_schedule():
+    obj_auth = AuthorizationClient()
+    obj_tomorrow = TomorrowSchedule(obj_auth)
+    token: str = await obj_auth.post_request()
+    schedule_tomorrow = await obj_tomorrow.get_tomorrow()
+    return schedule_tomorrow
 
 @dp.message(Command('start'))
 async def cmd_start(message: types.Message):
+    await message.answer("""
+Приветствую вас!\nэто телеграмм бот для парсинга учебного расписания с сайта: https://journal.top-academy.ru/
+Для того, чтобы получить дополнительный список команд введите команду: /help""")
+
+@dp.message(Command('today'))
+async def get_schedule_today(message: types.Message):
+    schedule = await get_schedule()
+    await message.answer(schedule)
+
+@dp.message(Command('today_schedule'))
+async def get_schedule_on_today(message: types.Message):
     kb = [
-        [types.KeyboardButton(text='Учебное расписание на сегодня')]
+        [types.KeyboardButton(text="учебное расписание на сегодня")]
+    ]
+
+    keyboard = types.ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True
+    )
+    await message.answer("Вы хотите получить расписание на сегодня?", reply_markup=keyboard)
+
+
+@dp.message(Command('tomorrow_schedule'))
+async def create_message_tomorrow(message: types.Message):
+    kb = [
+        [types.KeyboardButton(text="расписание на завтра")]
     ]
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=kb,
-        resize_keyboard=True,
+        resize_keyboard=True
     )
-    await message.answer('Хотите ли вы увидеть учебное расписание на сегодня?', reply_markup=keyboard)
+    await message.answer("Хотите увидеть расписание на завтра?" , reply_markup=keyboard)
 
-@dp.message(F.text.lower().capitalize().strip() == 'Учебное расписание на сегодня')
-async def input_schedule(message: types.Message):
-    result = await get_schedule()
-    await message.answer(result)
+@dp.message(F.text.lower() == "расписание на сегодня")
+async def handle_today_schedule_button(message: types.Message):
+    await message.reply(await get_schedule())
+
+@dp.message(F.text.lower() == "расписание на завтра")
+async def tomorrow_schedule_button(message: types.Message):
+    await message.reply(await get_tomorrow_schedule())
+
+@dp.message(Command("tomorrow"))
+async def get_schedule_on_tomorrow(message: types.Message):
+    schedule_tomorrow = await get_tomorrow_schedule()
+    await message.answer(schedule_tomorrow)
+
+@dp.message(Command('help'))
+async def get_help(message: types.Message):
+    await message.answer("""
+/start: выводит приветствие с юзером
+/help: предоставляет список доступных команд и выводит пояснения к ним.
+к примеру:
+для получения расписания на текущий день нужно сделать следующее:
+чтобы его получить необходимо ввести команду: /today_schedule и далее нажать на кнопку с названием (расписание на сегодня)
+Если вы хотите посмотреть расписание на завтра то тогда вам нужно:
+чтобы его получить необходимо ввести команду: /tomorrow_schedule и далее нажать на кнопку с названием (расписание на завтра)
+/today: выводит расписание на сегодняшний день
+/tomorrow: предоставляет расписание на завтра
+/today_schedule: для того, чтобы воспользоваться кнопкой для показа расписания на сегодня
+/tomorrow_schedule: для того, чтобы воспользоваться кнопкой для показа расписания на 
+""")
 

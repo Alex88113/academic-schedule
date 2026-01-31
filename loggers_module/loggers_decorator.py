@@ -1,7 +1,8 @@
 import asyncio
-from logger_module import logger
 import functools
 from typing import Callable, Any
+
+from logger_module import logger
 
 def create_loggers_decorator(function: Callable):
     @functools.wraps(function) # сохраняю метаданные функции

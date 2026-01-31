@@ -4,7 +4,7 @@ import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
 
-from config_user_settings.config_settings import *
+from config_settings import *
 
 load_dotenv()
 

@@ -3,8 +3,19 @@ from typing import Dict
 from datetime import datetime
 import json
 
-from loguru import logger
 import httpx
+
+from loggers_module.logger_module import *
+
+logger.debug('Импорт модуля с пользовательской конфигурацией')
+
+try:
+    from config_settings import UserSettings, create_user_model
+    logger.debug("Импорт прошел успешно!")
+
+except (ImportError, ModuleNotFoundError) as error:
+    logger.error('Ошибка при импорте модуля с пользовательской конфигурацией')
+    raise ValueError(f'Ошибка при импорте модуля с пользовательской конфигурацией: {error}')
 
 def create_settings_connections():
     timeout = httpx.Timeout(
@@ -40,20 +51,13 @@ def get_headlines_post_request() -> Dict[str, str]:
     }
     return headers
 
-def get_user_data_auth() -> Dict[str, str | None]:
-    return {
-        'username': 'Kuche_mu73',
-        'password': '6C3f6G3p',
-        'application_key': '6a56a5df2667e65aab73ce76d1dd737f7d1faef9c52e8b8c55ac75f565d8e8a6',
-        'id_city': None
-    }
 
 class AuthorizationClient:
     def __init__(self):
         self.session = create_settings_connections()
         self.base_url = 'https://msapi.top-academy.ru/api/v2/auth/login'
-        self.user_data = get_user_data_auth()
-        self.token_auth = None
+        self.user_data = create_user_model()
+        self._token_auth = None
 
     async def post_request(self) -> str:
         session = create_settings_connections()
@@ -66,9 +70,8 @@ class AuthorizationClient:
             logger.debug('Данные получены!')
             if token:
                 logger.debug("Токен доступа получен!")
-                self.token_auth = token
-                print(self.token_auth )
-                return self.token_auth
+                self._token_auth = token
+                return self._token_auth
             else: raise ValueError("Токена авторизации нет!")
 
         except httpx.HTTPStatusError as error:
@@ -88,7 +91,7 @@ class AuthorizationClient:
             logger.error("У вас нет прав доступа {e}", e=error)
             raise ValueError(f"У вас нет прав доступа {error}")
 
-        except httpx.ConnectTimeot as error:
+        except httpx.ConnectTimeout as error:
             logger.error("Истёк таймаут на подключение {e}", e=error)
             raise ValueError(f"Истёк таймаут на подключение {error}")
 

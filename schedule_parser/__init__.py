@@ -1,19 +1,20 @@
+import asyncio
+
 from loggers_module.logger_module import *
 
 try:
-    from .auth import AuthClients
-    from .parser import getting_schedule
-    from config_user_settings.config_settings import *
-    logger.info('Модули: auth и parser успешно импортированы!')
+    logger.debug("Производится импорт модулей")
+    from .auth import AuthorizationClient
+    from .parser import ScheduleParser
+    logger.debug("Импорт модулей произведен успешно!")
 
-except (ModuleNotFoundError, ImportError) as error:
-    logger.error(f'error import: {e}', e=error)
+except (ModuleNotFoundError, ImportError) as error_import:
+    logger.error("Ошибка при импорте модулей: {e}", e=error_import)
+    raise ValueError(f'Ошибка при импорте модулей: {error_import}')
 
-import asyncio
-
-
-async def main():
-    obj_class = AuthClients(user_data=user_data)
-    token_schedule: str = await obj_class.get_authorization()
-    result = await getting_schedule(token_schedule)
-    return result
+async def get_schedule_parser():
+    obj_auth = AuthorizationClient()
+    obj_schedule = ScheduleParser(obj_auth)
+    result = await obj_auth.post_request()
+    schedule = await obj_schedule.get_request()
+    return schedule

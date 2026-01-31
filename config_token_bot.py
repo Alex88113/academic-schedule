@@ -1,7 +1,9 @@
+import os
+
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
-import os
+
 
 load_dotenv()
 

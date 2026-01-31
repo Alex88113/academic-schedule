@@ -28,6 +28,7 @@ async def create_logger_debug():
     level='DEBUG',
     rotation='100 MB'
     )
+
 async def create_logger_warning():
     logger.add(
     'logs/warning.log',
@@ -36,6 +37,7 @@ async def create_logger_warning():
     filter=lambda record: record['level'].name == 'WARNING',
     rotation='150 MB'
     )
+
 async def create_logger_error():
     logger.add(
     'logs/error_critical.log',
@@ -43,12 +45,13 @@ async def create_logger_error():
     format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
     rotation='200 MB'
     )
-async def main():
+
+async def create_all_loggers():
     await create_logger_info()
     await create_logger_success()
     await create_logger_debug()
     await create_logger_warning()
     await create_logger_error()
 
-asyncio.run(main())
 
+asyncio.run(create_all_loggers())

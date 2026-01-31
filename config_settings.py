@@ -30,8 +30,8 @@ class UserSettings(BaseModel):
             return username
         else:
             raise ValueError('Возникла ошибка!\n'
-                             f'содержимое username: ({username})\n'
-                             f'тип {type(username)}')
+            f'содержимое username: ({username})\n'
+           f'тип {type(username)}')
 
     @field_validator('password')
     @classmethod
@@ -51,9 +51,9 @@ class UserSettings(BaseModel):
             return app_key
         else:
             raise ValueError('Возникли проблемы с токеном доступа:'
-                             f'app_key: {app_key}\n'
-                             f'Его тип: {type(app_key)}'
-                             )
+             f'app_key: {app_key}\n'
+             f'Его тип: {type(app_key)}'
+            )
 
 
     @field_validator('id_city')
@@ -63,9 +63,9 @@ class UserSettings(BaseModel):
             return id_city
         else:
             raise ValueError('id_city не является None\n'
-                             f'Текущий тип: {type(id_city)}\n'
-                             f'Содержимое: {id_city}'
-                             )
+             f'Текущий тип: {type(id_city)}\n'
+             f'Содержимое: {id_city}'
+            )
 
 def create_user_model():
     user_data = {
