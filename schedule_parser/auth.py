@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 
 import httpx
+from pydantic import BaseModel, Field, field_validator, ValidationError
 
 from loggers_module.logger_module import *
 
@@ -16,6 +17,24 @@ try:
 except (ImportError, ModuleNotFoundError) as error:
     logger.error('Ошибка при импорте модуля с пользовательской конфигурацией')
     raise ValueError(f'Ошибка при импорте модуля с пользовательской конфигурацией: {error}')
+
+class Tokens(BaseModel):
+    access_token: str = None
+    refresh_token: str = None
+
+    field_validator('access_token')
+    classmethod
+    def valid_token(cls, token: str):
+        if token is None: raise ValueError("Токен не может быть None")
+        if len(token) == 0: raise ValueError("access_token не может быть пустым")
+        else: return token
+
+    field_validator('refresh_token')
+    classmethod
+    def valid_refresh_token(cls, token: str):
+        if token is None: raise ValueError("Токен не может быть None")
+        if len(token) == 0: raise ValueError("refresh_token не может быть пустым")
+        else: return token
 
 def create_settings_connections():
     timeout = httpx.Timeout(
@@ -31,25 +50,27 @@ def create_settings_connections():
     )
     return httpx.AsyncClient(timeout=timeout, limits=limits)
 
-def get_headlines_post_request() -> Dict[str, str]:
-    headers = {
-        'accept': 'application/json, text/plain, */*',  # ожидаемый результат в формате json
-        'accept-language': 'ru_RU, ru',
-        'authorization': 'Bearer null',
-        'content-type': 'application/json',  # говорим о том что отправляем на сервак
-        'origin': 'https://journal.top-academy.ru',  # обязательно для безопастности (Cros защита)
-        'referer': 'https://journal.top-academy.ru/',  # желательно
-        "accept-encoding": "gzip, deflate, br, zstd",
-        "accept-language": "ru_RU, ru",
-        'sec-ch-ua': '"Chromium";v="140", "Not=A?Brand";v="24", "YaBrowser";v="25.10", "Yowser";v="2.5"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"Windows"',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-site',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36'
-    }
-    return headers
+
+class DataGetRequest:
+    def get_headlines_post_request(self) -> Dict[str, str]:
+        headers = {
+            'accept': 'application/json, text/plain, */*',  # ожидаемый результат в формате json
+            'accept-language': 'ru_RU, ru',
+            'authorization': 'Bearer null',
+            'content-type': 'application/json',  # говорим о том что отправляем на сервак
+            'origin': 'https://journal.top-academy.ru',  # обязательно для безопастности (Cros защита)
+            'referer': 'https://journal.top-academy.ru/',  # желательно
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "ru_RU, ru",
+            'sec-ch-ua': '"Chromium";v="140", "Not=A?Brand";v="24", "YaBrowser";v="25.10", "Yowser";v="2.5"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36'
+        }
+        return headers
 
 
 class AuthorizationClient:
@@ -57,22 +78,23 @@ class AuthorizationClient:
         self.session = create_settings_connections()
         self.base_url = 'https://msapi.top-academy.ru/api/v2/auth/login'
         self.user_data = create_user_model()
+        self.get_headlines = DataGetRequest().get_headlines_post_request()
         self._token_auth = None
 
     async def post_request(self) -> str:
         session = create_settings_connections()
-        headers = get_headlines_post_request()
+        headers = self.get_headlines
         logger.debug("Производится отправка post запроса...")
         try:
             response = await self.session.post(self.base_url, headers=headers, json=self.user_data)
-            data = response.json()
-            token = data.get('refresh_token')
-            logger.debug('Данные получены!')
-            if token:
-                logger.debug("Токен доступа получен!")
-                self._token_auth = token
-                return self._token_auth
-            else: raise ValueError("Токена авторизации нет!")
+            try:
+                validation_response = Tokens(**response.json())
+            except ValidationError as error:
+                logger.error("возникла ошибка при получении ответа от API: {e}", e=error)
+                raise ValueError(f"Данные не валидны: {error}")
+            token = validation_response.refresh_token
+            self._token_auth = token
+            return self._token_auth
 
         except httpx.HTTPStatusError as error:
             if error.statuis_code == 401:
@@ -102,3 +124,4 @@ class AuthorizationClient:
         except httpx.ConnectError as error_connect:
             logger.error("Не удалось подключится: {e}", e=error_connect)
             raise ValueError(f"Не удалось подключится: {error_connect}")
+
