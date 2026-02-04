@@ -59,6 +59,7 @@ class TomorrowSchedule:
         date = datetime.today()
         delta = timedelta(days=1)
         add_date = date + delta
+        
         formatted_date = add_date.strftime("%Y-%m-%d")
         url = f"{self.schedule_url + formatted_date}"
 
@@ -71,14 +72,17 @@ class TomorrowSchedule:
             response = await self.session.get(url, headers=headers)
             data = response.json()
             schedule = ''
+            
             logger.info("Расписание на завтра получено.")
-            schedule += f"📅 ДАТА ЗАНЯТИЙ ЗАВТРА {formatted_date} ЧИСЛО\n"
+            schedule += f"📅 РАСПИСАНИЕ НА ЗАВТРА {formatted_date}\n"
 
             for data2 in data:
                 if data2['date'] == formatted_date:
-                    schedule += f"⏰Начало занятия: {data2['started_at']} | 🏁 Конец: {data2['finished_at']}\n"
-                    schedule += f"Пара {data2['subject_name']} | Преподаватель: {data2['teacher_name']}\n"
-                    schedule += f"🏫 Аудитория: {data2['room_name']}\n"
+                    schedule += f"⏰Начало занятия: {data2['started_at']}"
+                    schedule += f"🏁 Конец: {data2['finished_at']}\n"
+                    schedule += f"Пара {data2['subject_name']}\n"
+                    schedule += f"Преподаватель: {data2['teacher_name']}\n"
+                    schedule += f"🏫Аудитория: {data2['room_name']}\n"
                     schedule += '\n'
 
             return schedule
