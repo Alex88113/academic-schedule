@@ -85,13 +85,16 @@ class AuthorizationClient:
         session = create_settings_connections()
         headers = self.get_headlines
         logger.debug("Производится отправка post запроса...")
+        
         try:
             response = await self.session.post(self.base_url, headers=headers, json=self.user_data)
             try:
                 validation_response = Tokens(**response.json())
+            
             except ValidationError as error:
                 logger.error("возникла ошибка при получении ответа от API: {e}", e=error)
                 raise ValueError(f"Данные не валидны: {error}")
+            
             token = validation_response.refresh_token
             self._token_auth = token
             return self._token_auth
