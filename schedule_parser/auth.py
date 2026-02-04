@@ -22,19 +22,19 @@ class Tokens(BaseModel):
     access_token: str = None
     refresh_token: str = None
 
-    field_validator('access_token')
-    classmethod
-    def valid_token(cls, token: str):
-        if token is None: raise ValueError("Токен не может быть None")
-        if len(token) == 0: raise ValueError("access_token не может быть пустым")
-        else: return token
+    @field_validator('access_token')
+    @classmethod
+    def valid_token(cls, v: str):
+        if v is None: raise ValueError("Токен не может быть None")
+        if len(v) == 0: raise ValueError("access_token не может быть пустым")
+        else: return v
 
-    field_validator('refresh_token')
-    classmethod
-    def valid_refresh_token(cls, token: str):
-        if token is None: raise ValueError("Токен не может быть None")
-        if len(token) == 0: raise ValueError("refresh_token не может быть пустым")
-        else: return token
+    @field_validator('refresh_token')
+    @classmethod
+    def valid_refresh_token(cls, v: str):
+        if v is None: raise ValueError("Токен не может быть None")
+        if len(v) == 0: raise ValueError("refresh_token не может быть пустым")
+        else: return v
 
 def create_settings_connections():
     timeout = httpx.Timeout(
