@@ -2,9 +2,10 @@ import asyncio
 from typing import Dict
 from datetime import datetime
 import json
+from abc import ABC, abstractmethod
 
 import httpx
-from pydantic import BaseModel, Field, field_validator, ValidationError
+from pydantic import BaseModel, Field,  field_validator,  ValidationError
 
 from loggers_module.logger_module import *
 
@@ -72,29 +73,36 @@ class DataGetRequest:
         }
         return headers
 
-
-class AuthorizationClient:
+class AuthClient(ABC):
     def __init__(self):
         self.session = create_settings_connections()
         self.base_url = 'https://msapi.top-academy.ru/api/v2/auth/login'
         self.user_data = create_user_model()
         self.get_headlines = DataGetRequest().get_headlines_post_request()
         self._token_auth = None
+        self.schedule_url = "https://msapi.top-academy.ru/api/v2/schedule/operations/get-month?date_filter="
 
+    @abstractmethod
+    async def post_request(self) -> Dict[str, str]:
+        pass
+
+    @abstractmethod
+    async def validation_tokens(self) -> Tokens:
+        pass
+
+    @abstractmethod
+    async def get_request(self) -> str:
+        pass
+
+class AuthorizationClient(AuthClient):
     async def post_request(self) -> str:
         session = create_settings_connections()
         headers = self.get_headlines
         logger.debug("Производится отправка post запроса...")
         try:
             response = await self.session.post(self.base_url, headers=headers, json=self.user_data)
-            try:
-                validation_response = Tokens(**response.json())
-            except ValidationError as error:
-                logger.error("возникла ошибка при получении ответа от API: {e}", e=error)
-                raise ValueError(f"Данные не валидны: {error}")
-            token = validation_response.refresh_token
-            self._token_auth = token
-            return self._token_auth
+            data = response.json()
+            return data
 
         except httpx.HTTPStatusError as error:
             if error.statuis_code == 401:
@@ -124,4 +132,65 @@ class AuthorizationClient:
         except httpx.ConnectError as error_connect:
             logger.error("Не удалось подключится: {e}", e=error_connect)
             raise ValueError(f"Не удалось подключится: {error_connect}")
+
+    async def validation_tokens(self, token) -> Tokens:
+        try:
+            tokens = Tokens(**token).model_dump()
+        except ValidationError as error:
+            raise ValidationError("возникла ошибка при валидации токенов")
+
+        if tokens:
+            self._token_auth = tokens.get('refresh_token')
+            return self._token_auth
+
+        else:
+            raise ValueError("Не удалось получить токен")
+
+
+    async def get_request(self, token_auth: str) -> str:
+        headers = {
+            "Authorization": f"Bearer {token_auth}",
+            'Accept': 'application/json, text/plain, */*',
+            'Origin': 'https://journal.top-academy.ru',
+            'Referer': 'https://journal.top-academy.ru/',
+            "path": "/api/v2/signal/operations/signals-list",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "sec-ch-ua": "Chromium;v=140, Not=A?Brand;v=24, YaBrowser;v=25.10, Yowser;v=2.5",
+            "sec-ch-ua-platform": "Windows",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-site",
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36'
+        }
+        date = datetime.today()
+        formatted_date = date.strftime("%Y-%m-%d")
+        schedule_url = f"https://msapi.top-academy.ru/api/v2/schedule/operations/get-month?date_filter={formatted_date}"
+        logger.info("Отправляется get request......")
+
+        resp = await self.session.get(schedule_url, headers=headers)
+        data = resp.json()
+        schedule = "\nРАСПИСАНИЕ НА СЕГОДНЯ\n"
+        for value in data:
+            if value.get('date') == formatted_date:
+                schedule += f"Занятие {value.get('subject_name')} | Преподаватель {value.get('teacher_name')}\n"
+                schedule += f"Начало {value.get('started_at')} | Конец {value.get('finished_at')}\n"
+                schedule += f"Аудитория {value.get('room_name')}\n"
+                schedule += "-" * 60; schedule += "\n"
+
+        return schedule
+
+async def main2():
+    try:
+        obj_auth = AuthorizationClient()
+        token = await obj_auth.post_request()
+        valid_token = await obj_auth.validation_tokens(token)
+        schedule = await obj_auth.get_request(valid_token)
+        print(schedule)
+        logger.info("Все прошло успешно!")
+
+    except AttributeError as error:
+        logger.error("возникла ошибка с: {e}", e=error)
+        raise AttributeError(f"возникла ошибка с: {error}")
+
+asyncio.run(main2())
 
