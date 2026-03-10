@@ -1,100 +1,61 @@
 import asyncio
-from typing import Dict
-
-import httpx
-from loggers_module.logger_module import *
-
+from typing import Dict, Any, List
 from datetime import datetime, timedelta
+import os
 
+from dotenv import load_dotenv
+import httpx
+from loguru import logger
+from pydantic import ValidationError
 
-from .auth import (
-    create_settings_connections,
-    AuthorizationClient
-)
+load_dotenv()
 
-def get_headlines_request(token: str) -> Dict[str, str]:
-    headers = {
-        "Authorization": f"Bearer {token}",
-        'Accept': 'application/json, text/plain, */*',
-        'Origin': 'https://journal.top-academy.ru',
-        'Referer': 'https://journal.top-academy.ru/',
-        "path": "/api/v2/signal/operations/signals-list",
-        "accept-encoding": "gzip, deflate, br, zstd",
-        "sec-ch-ua": "Chromium;v=140, Not=A?Brand;v=24, YaBrowser;v=25.10, Yowser;v=2.5",
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": "Windows",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-site",
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36'
-        }
-    return headers
+logger.debug("Производится импорт модулей в tomorrow")
+try:
+    from .auth import (Auth, ValidationTokens)
+    from configs.config_request import ScheduleApi
+    from network_config import *
+    logger.debug("Импорт завершен успешно")
 
+except ModuleNotFoundError as error:
+    logger.error("Возникла ошибка при импорте модуля auth: {e}", e=error)
+    raise ModuleNotFoundError(f"Возникла ошибка при импорте модуля auth: {error}")
+
+except Exception as error:
+    logger.error("Неизвестная ошибка при импорте: {e}", e=error)
 
 class TomorrowSchedule:
-    def __init__(self, auth_client: AuthorizationClient):
-        self.auth_client = auth_client
-        self.schedule_url = "https://msapi.top-academy.ru/api/v2/schedule/operations/get-month?date_filter="
-        self.session = create_settings_connections()
+    def __init__(self, schedule: List[Dict[str, str | Any]]) -> None:
+        if not isinstance(os.getenv('SCHEDULE_URL'), str) or len(os.getenv('SCHEDULE_URL').strip()) == 0:
+            raise ValueError("url для получения расписания не является строкой или она пуста")
 
-    def get_heaedlines_request(self, token: str) -> Dict[str, str]:
-        headers = {
-            "Authorization": f"Bearer {token}",
-            'Accept': 'application/json, text/plain, */*',
-            'Origin': 'https://journal.top-academy.ru',
-            'Referer': 'https://journal.top-academy.ru/',
-            "path": "/api/v2/signal/operations/signals-list",
-            "accept-encoding": "gzip, deflate, br, zstd",
-            "sec-ch-ua": "Chromium;v=140, Not=A?Brand;v=24, YaBrowser;v=25.10, Yowser;v=2.5",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "Windows",
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "same-site",
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36'
-        }
-        return headers
+        if not isinstance(schedule, List):
+            raise ValueError("Требуется список со словарями с данными результата get запроса")
 
-    async def get_tomorrow(self) -> str:
-        date = datetime.today()
+        self.schedule = schedule
+        self.SCHEDULE_URL = os.getenv('SCHEDULE_URL')
+
+    def __call__(self, date=datetime.now()) -> str:
         delta = timedelta(days=1)
         add_date = date + delta
-        
-        formatted_date = add_date.strftime("%Y-%m-%d")
-        url = f"{self.schedule_url + formatted_date}"
+        return add_date.strftime("%Y-%m-%d")
 
-        token = self.auth_client.token_auth
-        headers = get_headlines_request(token)
+    async def get_tomorrow(self) -> str:
+        schedule = '📅Расписание на завтра\n'
 
-        logger.info("Отправка get запроса....")
+        for value in self.schedule:
+            try:
+                valid_data = ScheduleApi(**value)
+            except ValidationError as error:
+                logger.error("Возникла ошибка при валидации полученного ответа: {e}", e=error)
+                raise ValidationError(f"Возникла ошибка при валидации полученного ответа: {error}")
 
-        try:
-            response = await self.session.get(url, headers=headers)
-            data = response.json()
-            schedule = ''
-            
-            logger.info("Расписание на завтра получено.")
-            schedule += f"📅 РАСПИСАНИЕ НА ЗАВТРА {formatted_date}\n"
+            if value.get('date') == self.__call__():
+                schedule += f"\nПара {value.get('subject_name')}\n"
+                schedule += f"Преподаватель {value.get("teacher_name")}\n"
+                schedule += f"⏰Начало {value.get("started_at")}\n"
+                schedule += f"🏁Конец {value.get("finished_at")}\n"
+                schedule += f'🏫Аудитория {value.get("room_name")}\n'
+                schedule +=  "*" * 30
 
-            for data2 in data:
-                if data2['date'] == formatted_date:
-                    schedule += f"⏰Начало занятия: {data2['started_at']}"
-                    schedule += f"🏁 Конец: {data2['finished_at']}\n"
-                    schedule += f"Пара {data2['subject_name']}\n"
-                    schedule += f"Преподаватель: {data2['teacher_name']}\n"
-                    schedule += f"🏫Аудитория: {data2['room_name']}\n"
-                    schedule += '\n'
-
-            return schedule
-
-        except httpx.ConnectTimeout as error:
-            logger.error("Не удалось установить соединение {e}", e=error)
-            raise ValueError(f"Не удалось установить соединение: {error}")
-
-        except httpx.ReadTimeout as error:
-            logger.error("Сервер отвечает, но данные слишком медленно идут {e}", e=error)
-            raise ValueError(f"Сервер отвечает, но данные слишком медленно идут: {error}")
-
-        except httpx.PoolTimeout as error:
-            logger.error("нет свободных соединений в пуле {e}", e=error)
-            raise ValueError(f"нет свободных соединений в пуле.\nПричина: {error}")
+        return schedule
