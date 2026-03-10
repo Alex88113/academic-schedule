@@ -2,7 +2,6 @@ import json
 import os
 from typing import Dict, List, Any, Coroutine
 import asyncio
-from datetime import datetime
 import os
 import sys
 
@@ -47,12 +46,14 @@ class Auth:
     async def closing_session(self) -> None:
         await self._client.aclose()
 
-    async def post_request(self) -> Any | None:
+    async def post_request(self) -> Dict[str, str | Any]:
         user_data = create_user_model()
         logger.debug("Отправка пост запроса...")
+        
         try:
             resp = await self._client.post(self.AUTH_URL,
-                                           headers=configs.config_request.get_post_model(), json=user_data)
+            headers=configs.config_request.get_post_model(), json=user_data)
+            
             data = resp.json()
             return data
 
@@ -86,7 +87,7 @@ class Auth:
             raise ValueError(f"Не удалось подключится: {error_connect}")
 
 class ValidationTokens:
-    def __init__(self, token_auth: configs.config_request.Dict[str, str]):
+    def __init__(self, token_auth: configs.config_request.Dict[str, str | Any]) -> None:
         if not isinstance(token_auth, dict):
             raise ValueError("Данные пост запроса должны быть в формате: json")
         self._token_auth = token_auth
@@ -105,7 +106,7 @@ class ValidationTokens:
 
     logger.debug("Валидация завершена!")
 
-async def get_valid_token():
+async def get_valid_token() -> str:
     auth = Auth()
     data_post = await auth.post_request()
     valid_obj = ValidationTokens(data_post)
