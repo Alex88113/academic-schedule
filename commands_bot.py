@@ -1,3 +1,7 @@
+import os
+import sys
+from loguru import logger
+
 from aiogram import (
     Bot, F,
     Dispatcher, types
@@ -7,9 +11,8 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from dotenv import load_dotenv
 
 try:
-    from config_settings import *
-    from schedule_parser.auth import AuthorizationClient
-    from schedule_parser.parser import ScheduleParser
+    from schedule_parser.auth import Auth, ValidationTokens
+    from schedule_parser.parser import ParsingSchedule, GetValidSchedule
     from schedule_parser.tomorrow import TomorrowSchedule
     logger.info("Модули успешно импортированы!")
 
@@ -28,6 +31,7 @@ def setup_package_path():
 
 setup_package_path()
 load_dotenv()
+
 logger.remove()
 
 logger.add(sys.stderr, format='{time} | {level} | {message}', level='INFO')
@@ -36,19 +40,50 @@ bot = Bot(os.getenv('TOKEN_MY_BOT'))
 dp = Dispatcher()
 logger.info('БОТ СОЗДАН!')
 
-async def get_schedule():
-    obj_auth = AuthorizationClient()
-    obj_schedule = ScheduleParser(obj_auth)
-    token: str = await obj_auth.post_request()
-    schedule = await obj_schedule.get_request()
-    return schedule
+async def get_today_schedule():
+    try:
+        obj_auth = Auth()
+        data_post = await obj_auth.post_request()
+        valid_obj = ValidationTokens(data_post)
+        valid_token = await valid_obj.valid_tokens()  # получение валидованного токена
+        parse_obj = ParsingSchedule(valid_token)
+        schedule_parsing = await parse_obj.get_parsing_schedule()
+        obj_schedule = GetValidSchedule(schedule_parsing)
+        result = await obj_schedule.get_schedule()  # получение расписания на сегодня
+        await obj_auth.closing_session()
+
+
+        return result
+
+    except AttributeError as error:
+        logger.error("Возникла ошибка с: {e}", e=error)
+        raise AttributeError(f"Возникла ошибка с: {error}")
+
+    except Exception as error:
+        logger.error("Возникла неизвестная ошибка: {e}", e=error)
+        raise Exception(f"Возникла неизвестная ошибка: {error}")
 
 async def get_tomorrow_schedule():
-    obj_auth = AuthorizationClient()
-    obj_tomorrow = TomorrowSchedule(obj_auth)
-    token: str = await obj_auth.post_request()
-    schedule_tomorrow = await obj_tomorrow.get_tomorrow()
-    return schedule_tomorrow
+    try:
+        obj_auth = Auth()
+        data_post = await obj_auth.post_request()
+        valid_obj = ValidationTokens(data_post)
+        valid_token = await valid_obj.valid_tokens()# получение валидованного токена
+        parse_obj = ParsingSchedule(valid_token)
+        schedule_parsing = await parse_obj.get_parsing_schedule()
+
+        obj_tomorrow = TomorrowSchedule(schedule_parsing)
+        result = await obj_tomorrow.get_tomorrow() # а это на завтра
+        await obj_auth.closing_session()
+        return result
+
+    except AttributeError as error:
+        logger.error("Возникла ошибка с: {e}", e=error)
+        raise AttributeError(f"Возникла ошибка с: {error}")
+
+    except Exception as error:
+        logger.error("Возникла неизвестная ошибка: {e}", e=error)
+        raise Exception(f"Возникла неизвестная ошибка: {error}")
 
 @dp.message(Command('start'))
 async def cmd_start(message: types.Message):
@@ -58,7 +93,7 @@ async def cmd_start(message: types.Message):
 
 @dp.message(Command('today'))
 async def get_schedule_today(message: types.Message):
-    schedule = await get_schedule()
+    schedule = await get_today_schedule()
     await message.answer(schedule)
 
 @dp.message(Command('today_schedule'))
@@ -87,7 +122,7 @@ async def create_message_tomorrow(message: types.Message):
 
 @dp.message(F.text.lower() == "расписание на сегодня")
 async def handle_today_schedule_button(message: types.Message):
-    await message.reply(await get_schedule())
+    await message.reply(await get_today_schedule())
 
 @dp.message(F.text.lower() == "расписание на завтра")
 async def tomorrow_schedule_button(message: types.Message):
@@ -113,4 +148,3 @@ async def get_help(message: types.Message):
 /today_schedule: для того, чтобы воспользоваться кнопкой для показа расписания на сегодня
 /tomorrow_schedule: для того, чтобы воспользоваться кнопкой для показа расписания на 
 """)
-
