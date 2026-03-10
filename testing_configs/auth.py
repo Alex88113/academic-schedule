@@ -1,21 +1,18 @@
 import json
 import os
-from typing import Dict, List, Any, Coroutine
+from typing import Dict, List
 import asyncio
 from datetime import datetime
-import os
-import sys
 
 import httpx
 from loguru import logger
 from pydantic import ValidationError
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-logger.debug("Производится импорт модулей в auth....")
+logger.debug("Производится импорт модулей....")
 
 try:
-    import configs.config_request
-    from configs.config_user_settings import create_user_model
+    from configs.config_request import *
+    from configs.config_user_settings import UserSettings, create_user_model
 
     logger.success("Модули успешно импортированы!")
 
@@ -30,29 +27,32 @@ except ImportError as error:
 from dotenv import load_dotenv
 load_dotenv()
 
+AUTH_URL = os.getenv('AUTH_URL')
+SCHEDULE_URL = os.getenv('SCHEDULE_URL')
 
 class Auth:
-    def __init__(self, timeout: float = 20.0) -> None:
-        self.client = None
+    def __init__(self, timeout: float = 20.0):
         self._client = httpx.AsyncClient(
             timeout=timeout,
             headers={"Accept": "application/json"}
         )
-        logger.debug("Проверка адреса авторизации из env....")
+        logger.debug("Проверка адресов из env....")
         if not isinstance(os.getenv('AUTH_URL'), str) or len(os.getenv('AUTH_URL')) == 0:
             raise ValueError("Данный url не является строкой или он пуст.")
 
-        self.AUTH_URL = os.getenv('AUTH_URL')
+        if not isinstance(os.getenv('SCHEDULE_URL'), str) or len(os.getenv('AUTH_URL')) == 0:
+            raise ValueError("url для получения расписания не является строкой или он пуст.")
+        logger.debug("Проверка завершена.\nАдреса получены!")
 
-    async def closing_session(self) -> None:
+    async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def post_request(self) -> Any | None:
+    async def post_request(self) -> Dict[str, str]:
         user_data = create_user_model()
         logger.debug("Отправка пост запроса...")
         try:
-            resp = await self._client.post(self.AUTH_URL,
-                                           headers=configs.config_request.get_post_model(), json=user_data)
+            resp = await self._client.post(AUTH_URL,
+            headers=get_post_model(), json=user_data)
             data = resp.json()
             return data
 
@@ -86,14 +86,14 @@ class Auth:
             raise ValueError(f"Не удалось подключится: {error_connect}")
 
 class ValidationTokens:
-    def __init__(self, token_auth: configs.config_request.Dict[str, str]):
+    def __init__(self, token_auth: Dict[str, str]):
         if not isinstance(token_auth, dict):
             raise ValueError("Данные пост запроса должны быть в формате: json")
         self._token_auth = token_auth
 
     logger.debug("Производится валидация токенов....")
     async def valid_tokens(self) -> str:
-        valid_tokens = configs.config_request.Tokens(**self._token_auth).model_dump()
+        valid_tokens = Tokens(**self._token_auth).model_dump()
 
         if valid_tokens:
             self._token_auth = valid_tokens.get('refresh_token')
@@ -111,4 +111,3 @@ async def get_valid_token():
     valid_obj = ValidationTokens(data_post)
     token = await valid_obj.valid_tokens()
     return token
-
