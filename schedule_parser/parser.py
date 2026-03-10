@@ -1,6 +1,6 @@
 import os
 import asyncio
-from typing import Dict, List
+from typing import Dict, List, Any
 from datetime import datetime, timedelta
 
 from loguru import logger
@@ -28,7 +28,7 @@ except ImportError as error:
 load_dotenv()
 
 class ParsingSchedule:
-    def __init__(self, token: str):
+    def __init__(self, token: str) -> None:
         if not isinstance(os.getenv('SCHEDULE_URL'), str) or len(os.getenv('SCHEDULE_URL').strip()) == 0:
             raise ValueError("url для получения расписания не является строкой или она пуста")
 
@@ -65,7 +65,7 @@ class ParsingSchedule:
         return data
 
 class GetValidSchedule:
-    def __init__(self, schedule: List[Dict[str, str | int]]):
+    def __init__(self, schedule: List[Dict[str, str | Any]]) -> None:
         if not isinstance(schedule, List):
                 raise ValueError("Требуется список со словарями с данными результата get запроса")
         self.schedule = schedule
