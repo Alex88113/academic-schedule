@@ -9,13 +9,11 @@ import httpx
 from httpx import Response
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 USERNAME = os.getenv('TOP_USERNAME')
 PASSWORD = os.getenv('PASSWORD')
 APPLICATION_KEY = os.getenv('APPLICATION_KEY')
-
 
 """
 Базовое мокирование post запросов
