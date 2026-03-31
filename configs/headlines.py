@@ -1,21 +1,4 @@
 from typing import Dict
-from datetime import datetime
-from datetime import date
-
-from pydantic import BaseModel, field_validator
-
-class ScheduleApi(BaseModel):
-    date: str =  None
-    lesson: int =  None
-    started_at: str =  None
-    finished_at: str =  None
-    teacher_name: str =  None
-    subject_name: str =  None
-    room_name: str =  None
-
-class Tokens(BaseModel):
-    access_token: str = None
-    refresh_token: str = None
 
 class HeadlinesPost:
     def create_model_post(self) -> Dict[str, str]:
@@ -43,4 +26,3 @@ def get_post_model():
     obj_post = HeadlinesPost()
     result = obj_post.create_model_post()
     return result
-
