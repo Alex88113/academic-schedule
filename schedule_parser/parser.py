@@ -12,8 +12,7 @@ from dotenv import load_dotenv
 logger.debug("Начался импорт модулей в parser...")
 
 try:
-    from configs.config_request import *
-    from network_config import get_connect_settings
+    from configs.api import ScheduleApi
     from .auth import Auth, ValidationTokens
     logger.debug("Импорт в модуле (parser) прошел успешно.")
 
@@ -37,6 +36,7 @@ class ParsingSchedule:
 
         self.token = token
         self.SCHEDULE_URL = os.getenv('SCHEDULE_URL')
+        self.auth_client = Auth().client
 
     def get_headlines_request(self, token_auth: str) -> Dict[str, str]:
             headers = {
@@ -58,7 +58,7 @@ class ParsingSchedule:
 
     async def get_parsing_schedule(self):
         headers = self.get_headlines_request(self.token)
-        client = get_connect_settings()
+        client = self.auth_client
         logger.debug("Отправка гет запроса на получение расписания....")
         resp = await client.get(self.SCHEDULE_URL, headers=headers)
         data = resp.json()

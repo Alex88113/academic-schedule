@@ -13,7 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 logger.debug("Производится импорт модулей в auth....")
 
 try:
-    import configs.config_request
+    from configs.headlines import get_post_model
+    import configs.api
     from configs.config_user_settings import create_user_model
 
     logger.success("Модули успешно импортированы!")
@@ -31,7 +32,7 @@ load_dotenv()
 
 
 class Auth:
-    def __init__(self, timeout: float = 20.0) -> None:
+    def __init__(self, timeout: float = 170.0) -> None:
         self.client = None
         self._client = httpx.AsyncClient(
             timeout=timeout,
@@ -46,13 +47,13 @@ class Auth:
     async def closing_session(self) -> None:
         await self._client.aclose()
 
-    async def post_request(self) -> Dict[str, str | Any]:
+    async def post_request(self, headlines=None) -> Dict[str, str | Any]:
         user_data = create_user_model()
         logger.debug("Отправка пост запроса...")
         
         try:
             resp = await self._client.post(self.AUTH_URL,
-            headers=configs.config_request.get_post_model(), json=user_data)
+            headers=headlines.get_post_model(), json=user_data)
             
             data = resp.json()
             return data
@@ -87,14 +88,14 @@ class Auth:
             raise ValueError(f"Не удалось подключится: {error_connect}")
 
 class ValidationTokens:
-    def __init__(self, token_auth: configs.config_request.Dict[str, str | Any]) -> None:
+    def __init__(self, token_auth: Dict[str, str | Any]) -> None:
         if not isinstance(token_auth, dict):
             raise ValueError("Данные пост запроса должны быть в формате: json")
         self._token_auth = token_auth
 
     logger.debug("Производится валидация токенов....")
     async def valid_tokens(self) -> str:
-        valid_tokens = configs.config_request.Tokens(**self._token_auth).model_dump()
+        valid_tokens = configs.api.Tokens(**self._token_auth).model_dump()
 
         if valid_tokens:
             self._token_auth = valid_tokens.get('refresh_token')

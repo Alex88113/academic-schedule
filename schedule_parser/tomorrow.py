@@ -13,8 +13,8 @@ load_dotenv()
 logger.debug("Производится импорт модулей в tomorrow")
 try:
     from .auth import (Auth, ValidationTokens)
-    from configs.config_request import ScheduleApi
-    from network_config import *
+    from configs.api import ScheduleApi
+    from network_configs import *
     logger.debug("Импорт завершен успешно")
 
 except ModuleNotFoundError as error:

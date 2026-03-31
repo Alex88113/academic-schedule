@@ -18,19 +18,21 @@ APPLICATION_KEY = os.getenv('APPLICATION_KEY')
 """
 Базовое мокирование post запросов
 """
-@respx.mock
-@pytest.mark.asyncio
-async def test_auth():
-    respx.post("https://msapi.top-academy.ru/api/v2/auth/login").mock(
-        return_value=Response(200, json={"access_token": "test-access-token", "refresh_token": "test-token"})
-    )
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            'https://msapi.top-academy.ru/api/v2/auth/login',
-            json={"username": USERNAME, "password": PASSWORD})
+class TestPostRequest:
+    @respx.mock
+    @pytest.mark.asyncio
+    async def test_auth(self):
+        respx.post("https://msapi.top-academy.ru/api/v2/auth/login").mock(
+            return_value=Response(200, json={"access_token": "test-access-token", "refresh_token": "test-token"})
+        )
 
-        assert resp.status_code == 200
-        assert resp.json()['access_token'] == 'test-access-token'
-        assert resp.json()['refresh_token'] == 'test-token'
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                'https://msapi.top-academy.ru/api/v2/auth/login',
+                     json={"username": USERNAME, "password": PASSWORD})
+
+            assert resp.status_code == 200
+            assert resp.json()['access_token'] == 'test-access-token'
+            assert resp.json()['refresh_token'] == 'test-token'
 
