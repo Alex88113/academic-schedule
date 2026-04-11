@@ -1,20 +1,19 @@
 import json
-import os
 from typing import Dict, List, Any, Coroutine
 import asyncio
+from pathlib import Path
 import os
-import sys
 
 import httpx
 from loguru import logger
 from pydantic import ValidationError
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+file = Path(__file__).parent.parent / "configs"
 logger.debug("Производится импорт модулей в auth....")
 
 try:
-    from configs.headlines import get_post_model
-    import configs.api
+    from configs.headers import get_post_model
+    from configs.college_api import *
     from configs.config_user_settings import create_user_model
 
     logger.success("Модули успешно импортированы!")
@@ -44,19 +43,16 @@ class Auth:
 
         self.AUTH_URL = os.getenv('AUTH_URL')
 
-    async def closing_session(self) -> None:
+    async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def post_request(self, headlines=None) -> Dict[str, str | Any]:
+    async def post_request(self, headers=None) -> Dict[str, Any]:
         user_data = create_user_model()
         logger.debug("Отправка пост запроса...")
         
         try:
             resp = await self._client.post(self.AUTH_URL,
-            headers=headlines.get_post_model(), json=user_data)
-            
-            data = resp.json()
-            return data
+            headers=get_post_model(), json=user_data)
 
         except httpx.HTTPStatusError as error:
             if error.status_code == 401:
@@ -87,30 +83,6 @@ class Auth:
             logger.error("Не удалось подключится: {e}", e=error_connect)
             raise ValueError(f"Не удалось подключится: {error_connect}")
 
-class ValidationTokens:
-    def __init__(self, token_auth: Dict[str, str | Any]) -> None:
-        if not isinstance(token_auth, dict):
-            raise ValueError("Данные пост запроса должны быть в формате: json")
-        self._token_auth = token_auth
-
-    logger.debug("Производится валидация токенов....")
-    async def valid_tokens(self) -> str:
-        valid_tokens = configs.api.Tokens(**self._token_auth).model_dump()
-
-        if valid_tokens:
-            self._token_auth = valid_tokens.get('refresh_token')
-            return self._token_auth
-
         else:
-            logger.error("Не удалось пройти валидацию")
-            raise ValidationError("Не удалось пройти валидацию")
-
-    logger.debug("Валидация завершена!")
-
-async def get_valid_token() -> str:
-    auth = Auth()
-    data_post = await auth.post_request()
-    valid_obj = ValidationTokens(data_post)
-    token = await valid_obj.valid_tokens()
-    return token
-
+            data = resp.json()
+            return data
