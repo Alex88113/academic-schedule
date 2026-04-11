@@ -2,7 +2,7 @@ import asyncio
 import httpx
 
 class HTTPSettings:
-    def create_settings_connections(self):
+    def get_client(self) -> httpx.AsyncClient:
         timeout = httpx.Timeout(
             connect=10.0,
             read=30.0,
@@ -19,5 +19,5 @@ class HTTPSettings:
 
 def get_connect_settings():
     obj_settings = HTTPSettings()
-    result = obj_settings.create_settings_connections()
+    result = obj_settings.get_client()
     return result
