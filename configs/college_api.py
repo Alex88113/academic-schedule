@@ -12,4 +12,3 @@ class ScheduleApi(BaseModel):
 class Tokens(BaseModel):
     access_token: str = None
     refresh_token: str = None
-
