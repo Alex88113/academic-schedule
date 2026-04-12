@@ -12,9 +12,9 @@ load_dotenv()
 
 logger.debug("Производится импорт модулей в tomorrow")
 try:
-    from .auth import (Auth, ValidationTokens)
-    from configs.api import ScheduleApi
-    from network_configs import *
+    from auth import Auth
+    from configs.college_api import ScheduleApi
+    from validation_tokens import ValidationTokens
     logger.debug("Импорт завершен успешно")
 
 except ModuleNotFoundError as error:
@@ -40,9 +40,8 @@ class TomorrowSchedule:
         add_date = date + delta
         return add_date.strftime("%Y-%m-%d")
 
-    async def get_tomorrow(self) -> str:
+    def get_tomorrow_schedule(self) -> str:
         schedule = '📅Расписание на завтра\n'
-
         for value in self.schedule:
             try:
                 valid_data = ScheduleApi(**value)
