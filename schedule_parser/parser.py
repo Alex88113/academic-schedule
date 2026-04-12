@@ -12,21 +12,22 @@ from dotenv import load_dotenv
 logger.debug("Начался импорт модулей в parser...")
 
 try:
-    from configs.api import ScheduleApi
-    from .auth import Auth, ValidationTokens
+    from configs.college_api import ScheduleApi
+    from auth import Auth
+    from validation_tokens import ValidationTokens
     logger.debug("Импорт в модуле (parser) прошел успешно.")
 
 except ModuleNotFoundError as error_import:
     logger.error("Возникла ошибка при импорте модулей в (parser): {e}", e=error_import)
-    raise ModuleNotFoundError(f"Возникла ошибка при импорте модулей в (parser): {error_import}")
+    raise
 
 except ImportError as error:
     logger.error("Возникла ошибка при импорте модулей в (parser): {e}", e=error)
-    raise ModuleNotFoundError(f"Возникла ошибка при импорте модулей в (parser): {error}")
+    raise
 
 load_dotenv()
 
-class ParsingSchedule:
+class Parsing:
     def __init__(self, token: str) -> None:
         if not isinstance(os.getenv('SCHEDULE_URL'), str) or len(os.getenv('SCHEDULE_URL').strip()) == 0:
             raise ValueError("url для получения расписания не является строкой или она пуста")
@@ -38,7 +39,7 @@ class ParsingSchedule:
         self.SCHEDULE_URL = os.getenv('SCHEDULE_URL')
         self.auth_client = Auth().client
 
-    def get_headlines_request(self, token_auth: str) -> Dict[str, str]:
+    def get_headers_request(self, token_auth: str) -> Dict[str, str]:
             headers = {
                 "Authorization": f"Bearer {token_auth}",
                 'Accept': 'application/json, text/plain, */*',
@@ -57,47 +58,23 @@ class ParsingSchedule:
             return headers
 
     async def get_parsing_schedule(self):
-        headers = self.get_headlines_request(self.token)
+        headers = self.get_headers_request(self.token)
         client = self.auth_client
         logger.debug("Отправка гет запроса на получение расписания....")
-        resp = await client.get(self.SCHEDULE_URL, headers=headers)
-        data = resp.json()
-        return data
 
-class GetValidSchedule:
-    def __init__(self, schedule: List[Dict[str, str | Any]]) -> None:
-        if not isinstance(schedule, List):
-                raise ValueError("Требуется список со словарями с данными результата get запроса")
-        self.schedule = schedule
+        try:
+            resp = await client.get(self.SCHEDULE_URL, headers=headers)
 
-    def __call__(self, date_tomorrow=datetime.now()) -> str:
-        return date_tomorrow.strftime("%Y-%m-%d")
+        except httpx.ConnectError as error:
+            logger.error("Не удалось установить соединение с доменом: {e}", e=error)
+            raise
+        except httpx.ConnectTimeout as error:
+            logger.error("Сервер не отвечает, причина: {e}", e=error)
+            raise
+        except httpx.ReadTimeout as errro:
+            logger.error("Сервер завис. причина: {e}", e=errro)
+            raise
 
-
-    def validation_schedule(self):
-        for value in self.schedule:
-            try:
-                data = ScheduleApi(**value)
-            except ValidationError as error:
-                logger.error("Возникла ошибка при валидации полученного ответа: {e}", e=error)
-                raise ValidationError(f"Возникла ошибка при валидации полученного ответа: {error}")
-
-        return self.schedule
-
-    async def get_schedule(self) -> str:
-        schedule = ''
-        data = self.validation_schedule()
-
-        for value in data:
-            if value.get('date') == self.__call__():
-                schedule += f"\n📅ДАТА НАЧАЛА ЗАНЯТИЙ: {value.get('date')}\n"
-                schedule += (f"Занятие {value.get('subject_name')}\n"
-                                f"Преподаватель: {value.get('teacher_name')}")
-                schedule += f"\n⏰Начало {value.get('Started_at')}\n"
-                schedule += f"🏁Конец {value.get('finished_at')}\n"
-                schedule += f"🏫Аудитория {value.get('room_name')}\n"
-                schedule += "*" * 70
-            else:
-                return "на сегодня занятий нет"
-
-        return schedule
+        else:
+            data = resp.json()
+            return data
