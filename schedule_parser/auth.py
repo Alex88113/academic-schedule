@@ -32,10 +32,11 @@ load_dotenv()
 
 
 class Auth:
-    def __init__(self, timeout: float = 170.0) -> None:
+    def __init__(self) -> None:
         self.client = get_connect_settings()
 
         logger.debug("Проверка адреса авторизации из env....")
+        
         if not isinstance(os.getenv('AUTH_URL'), str) or len(os.getenv('AUTH_URL')) == 0:
             raise ValueError("Данный url не является строкой или он пуст.")
 
