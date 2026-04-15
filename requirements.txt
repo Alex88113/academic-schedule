@@ -1,5 +1,5 @@
-aiogram==3.12.0
 httpx==0.27.0
 loguru==0.7.0
 python-dotenv==1.0.0
 pydantic==2.8.2
+aiogram
