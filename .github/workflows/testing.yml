@@ -1,4 +1,4 @@
-name: CI/CD for academic-schedule
+name: CI/CD for academic-schedule-parser
 
 on:
   push:
@@ -11,14 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-       uses: actions/checkout@v3
-
+        uses: actions/checkout@v3
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-
-          python-version: '3.12''
-
           python-version: '3.12'
 
       - name: Install dependencies
@@ -27,8 +23,14 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-testing.txt
           pip install -r requirements-dev.txt
-
-      - name: Run tests from schedule_parser/testing
+        
+      - name: Run tests
+        env:
+          AUTH_URL: $({ secrets.AUTH_URL )}
+          TOP_USERNAME: $({secrets.TOP_USERNAME )}
+          PASSWORD: $({ secrets.PASSWORD )}
+          APPLICATION_KEY: $({secrets.APPLICATION_KEY )}
+          SCHEDULE_URL: $({ secrets.SCHEDULE_URL )}
         run: |
           pytest schedule_parser/testing/test_auth.py -v
           pytest schedule_parser/testing/test_post_request.py -v
