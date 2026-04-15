@@ -1,6 +1,6 @@
 import asyncio
 import os
-from pathlib import Path
+
 
 import pytest
 import pytest_asyncio
@@ -19,8 +19,6 @@ APPLICATION_KEY = os.getenv('APPLICATION_KEY')
 """
 Базовое мокирование post запросов
 """
-
-
 class TestPostRequest:
     @respx.mock
     @pytest.mark.asyncio
