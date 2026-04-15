@@ -26,23 +26,23 @@ jobs:
         pip install -r requirements-testing.txt
         pip install -r requirements-dev.txt
 
+    - name: Create .env file from secrets
+      run: |
+        echo "AUTH_URL=${{ secrets.AUTH_URL }}" >> .env
+        echo "TOP_USERNAME=${{ secrets.TOP_USERNAME }}" >> .env
+        echo "PASSWORD=${{ secrets.PASSWORD }}" >> .env
+        echo "APPLICATION_KEY=${{ secrets.APPLICATION_KEY }}" >> .env
+        echo "SCHEDULE_URL=${{ secrets.SCHEDULE_URL }}" >> .env
+        echo "ID_CITY=${{ secrets.ID_CITY }}" >> .env
+
+    - name: Debug - check .env file
+      run: cat .env
+
     - name: Run tests from schedule_parser/testing
-      env:
-        AUTH_URL: ${{ secrets.AUTH_URL }}
-        TOP_USERNAME: ${{ secrets.TOP_USERNAME }}
-        PASSWORD: ${{ secrets.PASSWORD }}
-        APPLICATION_KEY: ${{ secrets.APPLICATION_KEY }}
-        SCHEDULE_URL: ${{ secrets.SCHEDULE_URL }}
-        ID_CITY: ${{ secrets.ID_CITY }}
       run: |
         pytest schedule_parser/testing/test_auth.py -v
         pytest schedule_parser/testing/test_post_request.py -v
 
     - name: Run tests configs
-      env:
-        AUTH_URL: ${{ secrets.AUTH_URL }}
-        TOP_USERNAME: ${{ secrets.TOP_USERNAME }}
-        PASSWORD: ${{ secrets.PASSWORD }}
-        APPLICATION_KEY: ${{ secrets.APPLICATION_KEY }}
       run: |
         pytest testing_configs/test_config_user.py -v
