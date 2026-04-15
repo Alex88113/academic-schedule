@@ -3,15 +3,14 @@ import asyncio
 from typing import Dict, List, Any
 from datetime import datetime, timedelta
 
-from loguru import logger
 import httpx
 from pydantic import ValidationError
 from dotenv import load_dotenv
 
-
 logger.debug("Начался импорт модулей в parser...")
 
 try:
+    from loggers_module.logger_module import *
     from configs.college_api import ScheduleApi
     from auth import Auth
     from validation_tokens import ValidationTokens
@@ -57,7 +56,7 @@ class Parsing:
             }
             return headers
 
-    async def get_parsing_schedule(self):
+    async def get_parsing_schedule(self) -> List[Dict[str, Any]]:
         headers = self.get_headers_request(self.token)
         client = self.auth_client
         logger.debug("Отправка гет запроса на получение расписания....")
