@@ -4,7 +4,7 @@ import pytest
 import respx
 import httpx
 
-from schedule_parser.auth import Auth
+from ..auth import Auth
 
 class TestAuthService:
     @respx.mock
