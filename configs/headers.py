@@ -1,7 +1,8 @@
 from typing import Dict
 
-class HeadlinesPost:
-    def create_model_post(self) -> Dict[str, str]:
+class HeadersPost:
+    @staticmethod
+    def create_model_post() -> Dict[str, str]:
         headers = {
             'accept': 'application/json, text/plain, */*',  # ожидаемый результат в формате json
             'accept-language': 'ru_RU, ru',
@@ -23,6 +24,6 @@ class HeadlinesPost:
 
 
 def get_post_model():
-    obj_post = HeadlinesPost()
+    obj_post = HeadersPost()
     result = obj_post.create_model_post()
     return result
