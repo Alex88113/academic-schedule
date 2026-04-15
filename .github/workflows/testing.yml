@@ -26,32 +26,23 @@ jobs:
         pip install -r requirements-testing.txt
         pip install -r requirements-dev.txt
 
-    - name: Debug secrets
-      run: |
-        echo "=== CHECKING SECRETS ==="
-        echo "AUTH_URL: ${{ secrets.AUTH_URL != '' && '✅ SET' || '❌ NOT SET' }}"
-        echo "TOP_USERNAME: ${{ secrets.TOP_USERNAME != '' && '✅ SET' || '❌ NOT SET' }}"
-        echo "PASSWORD: ${{ secrets.PASSWORD != '' && '✅ SET' || '❌ NOT SET' }}"
-        echo "APPLICATION_KEY: ${{ secrets.APPLICATION_KEY != '' && '✅ SET' || '❌ NOT SET' }}"
-        echo "SCHEDULE_URL: ${{ secrets.SCHEDULE_URL != '' && '✅ SET' || '❌ NOT SET' }}"
-        echo "ID_CITY: ${{ secrets.ID_CITY != '' && '✅ SET' || '❌ NOT SET' }}"
-
-    - name: Create .env file
-      run: |
-        echo "AUTH_URL=${{ secrets.AUTH_URL }}" >> .env
-        echo "TOP_USERNAME=${{ secrets.TOP_USERNAME }}" >> .env
-        echo "PASSWORD=${{ secrets.PASSWORD }}" >> .env
-        echo "APPLICATION_KEY=${{ secrets.APPLICATION_KEY }}" >> .env
-        echo "SCHEDULE_URL=${{ secrets.SCHEDULE_URL }}" >> .env
-        echo "ID_CITY=${{ secrets.ID_CITY }}" >> .env
-        echo "=== .env FILE CONTENT ==="
-        cat .env
-
     - name: Run tests from schedule_parser/testing
+      env:
+        AUTH_URL: "https://msapi.top-academy.ru/api/v2/auth/login"
+        TOP_USERNAME: "Kuche_mu73"
+        PASSWORD: "6C3f6G3p"
+        APPLICATION_KEY: "6a56a5df2667e65aab73ce76d1dd737f7d1faef9c52e8b8c55ac75f565d8e8a6"
+        SCHEDULE_URL: "https://msapi.top-academy.ru/api/v2/schedule/operations/get-month?date_filter="
+        ID_CITY: "592"
       run: |
         pytest schedule_parser/testing/test_auth.py -v
         pytest schedule_parser/testing/test_post_request.py -v
 
     - name: Run tests configs
+      env:
+        AUTH_URL: "https://msapi.top-academy.ru/api/v2/auth/login"
+        TOP_USERNAME: "Kuche_mu73"
+        PASSWORD: "6C3f6G3p"
+        APPLICATION_KEY: "6a56a5df2667e65aab73ce76d1dd737f7d1faef9c52e8b8c55ac75f565d8e8a6"
       run: |
         pytest testing_configs/test_config_user.py -v
