@@ -12,6 +12,7 @@ file = Path(__file__).parent.parent / "configs"
 logger.debug("Производится импорт модулей в auth....")
 
 try:
+    from configs.network_configs import get_connect_settings
     from configs.headers import get_post_model
     from configs.college_api import *
     from configs.config_user_settings import create_user_model
@@ -32,26 +33,20 @@ load_dotenv()
 
 class Auth:
     def __init__(self, timeout: float = 170.0) -> None:
-        self.client = None
-        self._client = httpx.AsyncClient(
-            timeout=timeout,
-            headers={"Accept": "application/json"}
-        )
+        self.client = get_connect_settings()
+
         logger.debug("Проверка адреса авторизации из env....")
         if not isinstance(os.getenv('AUTH_URL'), str) or len(os.getenv('AUTH_URL')) == 0:
             raise ValueError("Данный url не является строкой или он пуст.")
 
         self.AUTH_URL = os.getenv('AUTH_URL')
 
-    async def aclose(self) -> None:
-        await self._client.aclose()
-
     async def post_request(self, headers=None) -> Dict[str, Any]:
         user_data = create_user_model()
         logger.debug("Отправка пост запроса...")
         
         try:
-            resp = await self._client.post(self.AUTH_URL,
+            resp = await self.client.post(self.AUTH_URL,
             headers=get_post_model(), json=user_data)
 
         except httpx.HTTPStatusError as error:

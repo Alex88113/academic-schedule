@@ -40,19 +40,3 @@ class ValidationTokens:
             raise ValidationError("Не удалось пройти валидацию")
 
     logger.debug("Валидация завершена!")
-
-async def get_valid_token() -> str:
-    try:
-        auth = Auth()
-        data_post = await asyncio.create_task(auth.post_request())
-        valid_obj = ValidationTokens(data_post)
-        token = valid_obj.valid_tokens()
-
-    except ValueError as error:
-        logger.error("Неверно переданные аргументы")
-        raise
-    except Exception as error:
-        logger.error("Возникла неизвестная ошибка: {e}", e=error)
-        raise
-
-    else: return token

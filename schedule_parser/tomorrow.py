@@ -5,8 +5,11 @@ import os
 
 from dotenv import load_dotenv
 import httpx
-from loguru import logger
 from pydantic import ValidationError
+
+
+from loggers_module.logger_module import *
+
 
 load_dotenv()
 
@@ -55,6 +58,6 @@ class TomorrowSchedule:
                 schedule += f"⏰Начало {value.get("started_at")}\n"
                 schedule += f"🏁Конец {value.get("finished_at")}\n"
                 schedule += f'🏫Аудитория {value.get("room_name")}\n'
-                schedule +=  "*" * 30
+                schedule +=  "-" * 30
 
         return schedule

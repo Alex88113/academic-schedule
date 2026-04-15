@@ -39,7 +39,7 @@ class TodaySchedule:
                 schedule += f"\n⏰Начало {value.get('Started_at')}\n"
                 schedule += f"🏁Конец {value.get('finished_at')}\n"
                 schedule += f"🏫Аудитория {value.get('room_name')}\n"
-                schedule += "*" * 70
+                schedule += "-" * 70
             else:
                 return "на сегодня занятий нет"
 
