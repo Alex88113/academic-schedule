@@ -1,4 +1,4 @@
-name: CI/CD for academic-schedule
+name: CI/CD for academic-schedule-parser
 
 on:
   push:
