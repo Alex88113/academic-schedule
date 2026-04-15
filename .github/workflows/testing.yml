@@ -11,35 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run : |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-testing.txt
-          pip install -r requirements-dev.txt
-
-      - name: Run tests
-        env:
-          AUTH_URL: $({ secrets.AUTH_URL )}
-          TOP_USERNAME: $({secrets.TOP_USERNAME )}
-          PASSWORD: $({ secrets.PASSWORD )}
-          APPLICATION_KEY: $({secrets.APPLICATION_KEY )}
-          SCHEDULE_URL: $({ secrets.SCHEDULE_URL )}
-        run: |
-          pytest schedule_parser/testing/test_auth.py -v
-          pytest schedule_parser/testing/test_post_request.py -v
-
-      - name: Run tests configs
-        run: |
-          pytest testing_configs/test_config_user.py -v
-
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -55,34 +26,32 @@ jobs:
         pip install -r requirements-testing.txt
         pip install -r requirements-dev.txt
 
-    - name: Create .env file from secrets
-      env:
-        AUTH_URL: ${{ secrets.AUTH_URL }}
-        TOP_USERNAME: ${{ secrets.TOP_USERNAME }}
-        PASSWORD: ${{ secrets.PASSWORD }}
-        APPLICATION_KEY: ${{ secrets.APPLICATION_KEY }}
-        SCHEDULE_URL: ${{ secrets.SCHEDULE_URL }}
-        ID_CITY: ${{ secrets.ID_CITY }}
+    - name: Debug secrets
       run: |
-        echo "AUTH_URL=${AUTH_URL}" >> .env
-        echo "TOP_USERNAME=${TOP_USERNAME}" >> .env
-        echo "PASSWORD=${PASSWORD}" >> .env
-        echo "APPLICATION_KEY=${APPLICATION_KEY}" >> .env
-        echo "SCHEDULE_URL=${SCHEDULE_URL}" >> .env
-        echo "ID_CITY=${ID_CITY}" >> .env
+        echo "=== CHECKING SECRETS ==="
+        echo "AUTH_URL: ${{ secrets.AUTH_URL != '' && '✅ SET' || '❌ NOT SET' }}"
+        echo "TOP_USERNAME: ${{ secrets.TOP_USERNAME != '' && '✅ SET' || '❌ NOT SET' }}"
+        echo "PASSWORD: ${{ secrets.PASSWORD != '' && '✅ SET' || '❌ NOT SET' }}"
+        echo "APPLICATION_KEY: ${{ secrets.APPLICATION_KEY != '' && '✅ SET' || '❌ NOT SET' }}"
+        echo "SCHEDULE_URL: ${{ secrets.SCHEDULE_URL != '' && '✅ SET' || '❌ NOT SET' }}"
+        echo "ID_CITY: ${{ secrets.ID_CITY != '' && '✅ SET' || '❌ NOT SET' }}"
 
-    - name: Debug .env file
-      run: cat .env
+    - name: Create .env file
+      run: |
+        echo "AUTH_URL=${{ secrets.AUTH_URL }}" >> .env
+        echo "TOP_USERNAME=${{ secrets.TOP_USERNAME }}" >> .env
+        echo "PASSWORD=${{ secrets.PASSWORD }}" >> .env
+        echo "APPLICATION_KEY=${{ secrets.APPLICATION_KEY }}" >> .env
+        echo "SCHEDULE_URL=${{ secrets.SCHEDULE_URL }}" >> .env
+        echo "ID_CITY=${{ secrets.ID_CITY }}" >> .env
+        echo "=== .env FILE CONTENT ==="
+        cat .env
+
+    - name: Run tests from schedule_parser/testing
+      run: |
+        pytest schedule_parser/testing/test_auth.py -v
+        pytest schedule_parser/testing/test_post_request.py -v
+
     - name: Run tests configs
       run: |
         pytest testing_configs/test_config_user.py -v
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: |
-          .pytest_cache/
-          pytest.xml
-
