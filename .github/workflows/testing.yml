@@ -27,15 +27,22 @@ jobs:
         pip install -r requirements-dev.txt
 
     - name: Create .env file from secrets
+      env:
+        AUTH_URL: ${{ secrets.AUTH_URL }}
+        TOP_USERNAME: ${{ secrets.TOP_USERNAME }}
+        PASSWORD: ${{ secrets.PASSWORD }}
+        APPLICATION_KEY: ${{ secrets.APPLICATION_KEY }}
+        SCHEDULE_URL: ${{ secrets.SCHEDULE_URL }}
+        ID_CITY: ${{ secrets.ID_CITY }}
       run: |
-        echo "AUTH_URL=${{ SECRETS.AUTH_URL }}" >> .env
-        echo "TOP_USERNAME=${{ SECRETS.TOP_USERNAME }}" >> .env
-        echo "PASSWORD=${{ SECRETS.PASSWORD }}" >> .env
-        echo "APPLICATION_KEY=${{ SECRETS.APPLICATION_KEY }}" >> .env
-        echo "SCHEDULE_URL=${{ SECRETS.SCHEDULE_URL }}" >> .env
-        echo "ID_CITY=${{ SECRETS.ID_CITY }}" >> .env
+        echo "AUTH_URL=${AUTH_URL}" >> .env
+        echo "TOP_USERNAME=${TOP_USERNAME}" >> .env
+        echo "PASSWORD=${PASSWORD}" >> .env
+        echo "APPLICATION_KEY=${APPLICATION_KEY}" >> .env
+        echo "SCHEDULE_URL=${SCHEDULE_URL}" >> .env
+        echo "ID_CITY=${ID_CITY}" >> .env
 
-    - name: Debug - check .env file
+    - name: Debug .env file
       run: cat .env
 
     - name: Run tests from schedule_parser/testing
@@ -46,3 +53,12 @@ jobs:
     - name: Run tests configs
       run: |
         pytest testing_configs/test_config_user.py -v
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          .pytest_cache/
+          pytest.xml
