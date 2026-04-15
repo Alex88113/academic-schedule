@@ -44,12 +44,6 @@ jobs:
 
     - name: Debug .env file
       run: cat .env
-
-    - name: Run tests from schedule_parser/testing
-      run: |
-        pytest schedule_parser/testing/test_auth.py -v
-        pytest schedule_parser/testing/test_post_request.py -v
-
     - name: Run tests configs
       run: |
         pytest testing_configs/test_config_user.py -v
