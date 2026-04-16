@@ -28,6 +28,7 @@ except ImportError as error:
     raise ModuleNotFoundError(f"Возникла ошибка при импорте модулей: {error}")
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -36,26 +37,30 @@ class Auth:
         self.client = get_connect_settings()
 
         logger.debug("Проверка адреса авторизации из env....")
-        
-        if not isinstance(os.getenv('AUTH_URL'), str) or len(os.getenv('AUTH_URL')) == 0:
+
+        if (
+            not isinstance(os.getenv("AUTH_URL"), str)
+            or len(os.getenv("AUTH_URL")) == 0
+        ):
             raise ValueError("Данный url не является строкой или он пуст.")
 
-        self.AUTH_URL = os.getenv('AUTH_URL')
+        self.AUTH_URL = os.getenv("AUTH_URL")
 
     async def post_request(self, headers=None) -> Dict[str, Any]:
         user_data = create_user_model()
         logger.debug("Отправка пост запроса...")
-        
+
         try:
-            resp = await self.client.post(self.AUTH_URL,
-            headers=get_post_model(), json=user_data)
+            resp = await self.client.post(
+                self.AUTH_URL, headers=get_post_model(), json=user_data
+            )
 
         except httpx.HTTPStatusError as error:
-            if error.status_code == 401:
-                logger.error('Отказано в доступе {e}', e=error.status_code)
+            if error.response.status_code == 401:
+                logger.error("Отказано в доступе {e}", e=error.response.status_code)
                 raise ValueError(f"Отказано в доступе: {error}")
 
-            elif error.status_code == 431:
+            elif error.response.status_code == 431:
                 logger.error("Поля заголовков слишком длинные {e}", e=error)
                 raise ValueError(f"Поля заголовков слишком длинные {error}")
 

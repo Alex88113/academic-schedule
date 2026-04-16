@@ -1,4 +1,8 @@
 services:
   parser_tg_bot:
     build: .
-    
+    image: parser_tg_bot:beta
+    container_name: parser_tg_bot
+    restart: unless-stopped
+    env_file:
+      - .env
